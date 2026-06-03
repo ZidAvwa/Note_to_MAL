@@ -11,7 +11,7 @@ class MalGuiImporter:
     def __init__(self, root):
         self.root = root
         self.root.title("MAL List Importer")
-        self.root.geometry("950x650")
+        self.root.geometry("950x750")
         
         self.filename = ""
         self.all_anime = []
@@ -77,8 +77,11 @@ class MalGuiImporter:
         self.search_label = ttk.Label(self.top_frame, text="Searching: ", font=("Arial", 11, "italic"))
         self.search_label.pack(side="right")
         
+        self.control_frame = ttk.Frame(self.root, padding=10)
+        self.control_frame.pack(fill="x", side="bottom")
+        
         self.main_frame = ttk.Panedwindow(self.root, orient="horizontal")
-        self.main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        self.main_frame.pack(fill="both", expand=True, padx=10, pady=5)
         
         self.list_frame = ttk.Frame(self.main_frame, padding=5)
         self.main_frame.add(self.list_frame, weight=3)
@@ -97,24 +100,23 @@ class MalGuiImporter:
         self.details_label = ttk.Label(self.right_frame, text="", justify="center", font=("Arial", 10))
         self.details_label.pack(pady=5)
         
-        self.control_frame = ttk.Frame(self.root, padding=10)
-        self.control_frame.pack(fill="x")
-        
-        ttk.Label(self.control_frame, text="Status:").pack(side="left", padx=5)
-        self.status_combobox = ttk.Combobox(self.control_frame, values=["Completed", "Watching", "On-Hold", "Plan to Watch", "Dropped"], state="readonly", width=15)
-        self.status_combobox.set("Completed")
-        self.status_combobox.pack(side="left", padx=5)
-        
-        ttk.Label(self.control_frame, text="Rating (1-10):").pack(side="left", padx=5)
-        self.rating_entry = ttk.Entry(self.control_frame, width=5)
-        self.rating_entry.pack(side="left", padx=5)
-        self.rating_entry.bind("<Return>", lambda e: self.submit_current())
-        
-        self.submit_btn = ttk.Button(self.control_frame, text="Submit & Next", command=self.submit_current)
-        self.submit_btn.pack(side="right", padx=5)
-        
-        self.skip_btn = ttk.Button(self.control_frame, text="Skip Title", command=self.skip_current)
-        self.skip_btn.pack(side="right", padx=5)
+        self.status_var = tk.StringVar(value="Completed")
+        status_frame = tk.Frame(self.control_frame)
+        status_frame.pack(pady=5)
+        for st in ["Completed", "Watching", "On-Hold", "Plan to Watch", "Dropped"]:
+            tk.Radiobutton(status_frame, text=st, variable=self.status_var, value=st, indicatoron=False, font=("Arial", 11, "bold"), width=12, bg="#e0e0e0", selectcolor="#a0c0ff").pack(side="left", padx=3)
+            
+        self.rating_var = tk.StringVar(value="0")
+        rating_frame = tk.Frame(self.control_frame)
+        rating_frame.pack(pady=5)
+        tk.Radiobutton(rating_frame, text="0 (Unrated)", variable=self.rating_var, value="0", indicatoron=False, font=("Arial", 12, "bold"), width=10, bg="#e0e0e0", selectcolor="#a0c0ff").pack(side="left", padx=3)
+        for i in range(1, 11):
+            tk.Radiobutton(rating_frame, text=str(i), variable=self.rating_var, value=str(i), indicatoron=False, font=("Arial", 12, "bold"), width=4, bg="#e0e0e0", selectcolor="#a0c0ff").pack(side="left", padx=3)
+            
+        action_frame = tk.Frame(self.control_frame)
+        action_frame.pack(pady=10)
+        tk.Button(action_frame, text="Submit & Next", command=self.submit_current, font=("Arial", 12, "bold"), bg="#4caf50", fg="white", width=20, height=2).pack(side="left", padx=10)
+        tk.Button(action_frame, text="Skip Title", command=self.skip_current, font=("Arial", 12, "bold"), bg="#f44336", fg="white", width=20, height=2).pack(side="left", padx=10)
 
     def search_mal_api(self, query):
         url = "https://api.jikan.moe/v4/anime"
@@ -138,8 +140,8 @@ class MalGuiImporter:
         self.results_box.delete(0, tk.END)
         self.img_label.config(image="")
         self.details_label.config(text="")
-        self.rating_entry.delete(0, tk.END)
-        self.status_combobox.set("Completed")
+        self.status_var.set("Completed")
+        self.rating_var.set("0")
         
         title = self.all_anime[self.current_idx]
         self.progress_label.config(text="Progress: " + str(self.current_idx + 1) + "/" + str(len(self.all_anime)))
@@ -189,15 +191,8 @@ class MalGuiImporter:
                 self.img_label.config(image="")
 
     def submit_current(self):
-        score = self.rating_entry.get().strip()
-        if score != "" and (not score.isdigit() or not (1 <= int(score) <= 10)):
-            messagebox.showwarning("Invalid Input", "Rating must be a whole number between 1 and 10, or left completely blank.")
-            return
-            
-        if score == "":
-            score = "0"
-            
-        status = self.status_combobox.get()
+        score = self.rating_var.get()
+        status = self.status_var.get()
         
         watched_eps = self.selected_episodes if status == "Completed" else "0"
         
