@@ -11,7 +11,15 @@ class MalGuiImporter:
     def __init__(self, root):
         self.root = root
         self.root.title("MAL List Importer")
-        self.root.geometry("950x750")
+        self.root.geometry("1000x800")
+        self.root.configure(bg="#1e1e1e")
+        
+        style = ttk.Style(self.root)
+        style.theme_use("clam")
+        style.configure(".", background="#1e1e1e", foreground="#e0e0e0")
+        style.configure("TLabel", background="#1e1e1e", foreground="#e0e0e0")
+        style.configure("TFrame", background="#1e1e1e")
+        style.configure("TPanedwindow", background="#1e1e1e")
         
         self.filename = ""
         self.all_anime = []
@@ -68,50 +76,64 @@ class MalGuiImporter:
                 self.all_anime.append(line)
 
     def setup_ui(self):
-        self.top_frame = ttk.Frame(self.root, padding=10)
+        self.top_frame = tk.Frame(self.root, bg="#1e1e1e", pady=10, padx=10)
         self.top_frame.pack(fill="x")
         
-        self.progress_label = ttk.Label(self.top_frame, text="Progress: 0/0", font=("Arial", 12, "bold"))
-        self.progress_label.pack(side="left")
+        self.progress_label = tk.Label(self.top_frame, text="Progress: 0/0", font=("Arial", 12, "bold"), bg="#1e1e1e", fg="#4fc1ff")
+        self.progress_label.pack(side="left", padx=10)
         
-        self.search_label = ttk.Label(self.top_frame, text="Searching: ", font=("Arial", 11, "italic"))
-        self.search_label.pack(side="right")
+        search_container = tk.Frame(self.top_frame, bg="#1e1e1e")
+        search_container.pack(side="right")
         
-        self.control_frame = ttk.Frame(self.root, padding=10)
-        self.control_frame.pack(fill="x", side="bottom")
+        tk.Label(search_container, text="Manual Search:", font=("Arial", 11), bg="#1e1e1e", fg="#cccccc").pack(side="left", padx=5)
+        self.search_var = tk.StringVar()
+        self.search_entry = tk.Entry(search_container, textvariable=self.search_var, font=("Arial", 12), width=35, bg="#3c3c3c", fg="#ffffff", insertbackground="white", borderwidth=0)
+        self.search_entry.pack(side="left", padx=5, ipady=4)
+        self.search_entry.bind("<Return>", self.manual_search)
+        
+        search_btn = tk.Button(search_container, text="Search API", command=self.manual_search, bg="#0e639c", fg="white", font=("Arial", 10, "bold"), borderwidth=0, padx=10, pady=2, cursor="hand2")
+        search_btn.pack(side="left", padx=5)
         
         self.main_frame = ttk.Panedwindow(self.root, orient="horizontal")
-        self.main_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        self.main_frame.pack(fill="both", expand=True, padx=15, pady=5)
         
-        self.list_frame = ttk.Frame(self.main_frame, padding=5)
+        self.list_frame = tk.Frame(self.main_frame, bg="#1e1e1e")
         self.main_frame.add(self.list_frame, weight=3)
         
-        ttk.Label(self.list_frame, text="Search Results (Select One):", font=("Arial", 10, "bold")).pack(anchor="w", pady=5)
-        self.results_box = tk.Listbox(self.list_frame, font=("Arial", 10))
+        tk.Label(self.list_frame, text="Search Results (Select One):", font=("Arial", 11, "bold"), bg="#1e1e1e", fg="#cccccc").pack(anchor="w", pady=5)
+        self.results_box = tk.Listbox(self.list_frame, font=("Arial", 11), bg="#252526", fg="#d4d4d4", selectbackground="#094771", selectforeground="#ffffff", borderwidth=0, highlightthickness=1, highlightcolor="#3e3e42", highlightbackground="#3e3e42")
         self.results_box.pack(fill="both", expand=True)
         self.results_box.bind("<<ListboxSelect>>", self.on_select_anime)
         
-        self.right_frame = ttk.Frame(self.main_frame, padding=5)
+        self.right_frame = tk.Frame(self.main_frame, bg="#1e1e1e")
         self.main_frame.add(self.right_frame, weight=2)
         
-        self.img_label = ttk.Label(self.right_frame)
+        self.img_label = tk.Label(self.right_frame, bg="#1e1e1e")
         self.img_label.pack(pady=10)
         
-        self.details_label = ttk.Label(self.right_frame, text="", justify="center", font=("Arial", 10))
+        self.details_label = tk.Label(self.right_frame, text="", justify="center", font=("Arial", 11), bg="#1e1e1e", fg="#ffffff")
         self.details_label.pack(pady=5)
         
+        self.control_frame = tk.Frame(self.root, bg="#1e1e1e", pady=15)
+        self.control_frame.pack(fill="x", side="bottom")
+        
         self.status_var = tk.StringVar(value="Completed")
-        status_frame = tk.Frame(self.control_frame)
+        status_frame = tk.Frame(self.control_frame, bg="#1e1e1e")
         status_frame.pack(pady=5)
+        
         for st in ["Completed", "Watching", "On-Hold", "Plan to Watch", "Dropped"]:
-            tk.Radiobutton(status_frame, text=st, variable=self.status_var, value=st, indicatoron=False, font=("Arial", 11, "bold"), width=12, bg="#e0e0e0", selectcolor="#a0c0ff").pack(side="left", padx=3)
+            tk.Radiobutton(status_frame, text=st, variable=self.status_var, value=st, indicatoron=False, font=("Arial", 11, "bold"), width=12, bg="#333333", fg="#cccccc", selectcolor="#0e639c", activebackground="#444444", activeforeground="#ffffff", borderwidth=0, cursor="hand2").pack(side="left", padx=4)
             
         self.rating_var = tk.StringVar(value="0")
-        rating_frame = tk.Frame(self.control_frame)
-        rating_frame.pack(pady=5)
+        rating_frame = tk.Frame(self.control_frame, bg="#1e1e1e")
+        rating_frame.pack(pady=10)
+        
+        tk.Radiobutton(rating_frame, text="0 (Unrated)", variable=self.rating_var, value="0", indicatoron=False, font=("Arial", 11, "bold"), width=20, bg="#333333", fg="#cccccc", selectcolor="#094771", activebackground="#444444", activeforeground="#ffffff", borderwidth=0, cursor="hand2").pack(side="top", pady=(0, 8))
+        
+        rating_grid = tk.Frame(rating_frame, bg="#1e1e1e")
+        rating_grid.pack()
         
         ratings_data = [
-            ("0", "0 (Unrated)"),
             ("1", "(1) Appalling"),
             ("2", "(2) Horrible"),
             ("3", "(3) Very Bad"),
@@ -127,19 +149,48 @@ class MalGuiImporter:
         for i, data_tuple in enumerate(ratings_data):
             val = data_tuple[0]
             text = data_tuple[1]
-            row_idx = i // 6
-            col_idx = i % 6
-            tk.Radiobutton(rating_frame, text=text, variable=self.rating_var, value=val, indicatoron=False, font=("Arial", 10, "bold"), width=14, bg="#e0e0e0", selectcolor="#a0c0ff").grid(row=row_idx, column=col_idx, padx=2, pady=2)
+            row_idx = 0 if i < 5 else 1
+            col_idx = i % 5
+            tk.Radiobutton(rating_grid, text=text, variable=self.rating_var, value=val, indicatoron=False, font=("Arial", 10, "bold"), width=15, bg="#333333", fg="#cccccc", selectcolor="#094771", activebackground="#444444", activeforeground="#ffffff", borderwidth=0, cursor="hand2").grid(row=row_idx, column=col_idx, padx=4, pady=4)
             
-        action_frame = tk.Frame(self.control_frame)
-        action_frame.pack(pady=10)
-        tk.Button(action_frame, text="◄ Go Back", command=self.go_back, font=("Arial", 12, "bold"), bg="#ff9800", fg="white", width=12, height=2).pack(side="left", padx=10)
-        tk.Button(action_frame, text="Submit & Next", command=self.submit_current, font=("Arial", 12, "bold"), bg="#4caf50", fg="white", width=20, height=2).pack(side="left", padx=10)
-        tk.Button(action_frame, text="Skip Title", command=self.skip_current, font=("Arial", 12, "bold"), bg="#f44336", fg="white", width=20, height=2).pack(side="left", padx=10)
+        action_frame = tk.Frame(self.control_frame, bg="#1e1e1e")
+        action_frame.pack(pady=15)
+        
+        tk.Button(action_frame, text="◄ Go Back", command=self.go_back, font=("Arial", 12, "bold"), bg="#d97706", fg="white", width=12, height=2, borderwidth=0, cursor="hand2").pack(side="left", padx=10)
+        tk.Button(action_frame, text="Submit & Next", command=self.submit_current, font=("Arial", 12, "bold"), bg="#16a34a", fg="white", width=20, height=2, borderwidth=0, cursor="hand2").pack(side="left", padx=10)
+        tk.Button(action_frame, text="Skip Title", command=self.skip_current, font=("Arial", 12, "bold"), bg="#dc2626", fg="white", width=20, height=2, borderwidth=0, cursor="hand2").pack(side="left", padx=10)
+
+    def manual_search(self, event=None):
+        query = self.search_var.get().strip()
+        if not query:
+            return
+            
+        self.results_box.delete(0, tk.END)
+        self.img_label.config(image="")
+        self.details_label.config(text="Searching API...")
+        self.root.update()
+        
+        self.current_results = self.search_mal_api(query)
+        self.details_label.config(text="")
+        
+        if self.current_results:
+            for res in self.current_results:
+                t = res.get("title", "Unknown")
+                t_type = res.get("type", "TV")
+                year = res.get("year") or "N/A"
+                self.results_box.insert(tk.END, t + " (" + t_type + ", " + str(year) + ")")
+            self.results_box.selection_set(0)
+            self.on_select_anime(None)
+        else:
+            self.results_box.insert(tk.END, "No database entries found for this query.")
+            self.selected_mal_id = "0"
+            self.selected_title = query
+            self.selected_type = "TV"
+            self.selected_episodes = "0"
 
     def search_mal_api(self, query):
         url = "https://api.jikan.moe/v4/anime"
-        params = {"q": query, "limit": 5}
+        params = {"q": query, "limit": 7}
         try:
             res = requests.get(url, params=params, timeout=10)
             if res.status_code == 200:
@@ -163,26 +214,12 @@ class MalGuiImporter:
         self.rating_var.set("0")
         
         title = self.all_anime[self.current_idx]
+        self.search_var.set(title)
+        
         self.progress_label.config(text="Progress: " + str(self.current_idx + 1) + "/" + str(len(self.all_anime)))
-        self.search_label.config(text="Searching: '" + title + "'")
         self.root.update()
         
-        self.current_results = self.search_mal_api(title)
-        
-        if self.current_results:
-            for res in self.current_results:
-                t = res.get("title", "Unknown")
-                t_type = res.get("type", "TV")
-                year = res.get("year") or "N/A"
-                self.results_box.insert(tk.END, t + " (" + t_type + ", " + str(year) + ")")
-            self.results_box.selection_set(0)
-            self.on_select_anime(None)
-        else:
-            self.results_box.insert(tk.END, "No database entries found for this query")
-            self.selected_mal_id = "0"
-            self.selected_title = title
-            self.selected_type = "TV"
-            self.selected_episodes = "0"
+        self.manual_search()
 
     def on_select_anime(self, event):
         idx = self.results_box.curselection()
@@ -203,7 +240,7 @@ class MalGuiImporter:
             try:
                 img_res = requests.get(img_url, timeout=5)
                 img_data = Image.open(io.BytesIO(img_res.content))
-                img_data.thumbnail((180, 260))
+                img_data.thumbnail((200, 290))
                 self.photo_img = ImageTk.PhotoImage(img_data)
                 self.img_label.config(image=self.photo_img)
             except Exception:
