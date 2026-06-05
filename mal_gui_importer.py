@@ -22,7 +22,7 @@ class MalGuiImporter:
         self.selected_type = "TV"
         self.selected_episodes = "0"
         
-        self.anime_xml_list = []
+        self.anime_xml_dict = {}
         
         self.load_batch_file()
         self.setup_ui()
@@ -109,12 +109,31 @@ class MalGuiImporter:
         self.rating_var = tk.StringVar(value="0")
         rating_frame = tk.Frame(self.control_frame)
         rating_frame.pack(pady=5)
-        tk.Radiobutton(rating_frame, text="0 (Unrated)", variable=self.rating_var, value="0", indicatoron=False, font=("Arial", 12, "bold"), width=10, bg="#e0e0e0", selectcolor="#a0c0ff").pack(side="left", padx=3)
-        for i in range(1, 11):
-            tk.Radiobutton(rating_frame, text=str(i), variable=self.rating_var, value=str(i), indicatoron=False, font=("Arial", 12, "bold"), width=4, bg="#e0e0e0", selectcolor="#a0c0ff").pack(side="left", padx=3)
+        
+        ratings_data = [
+            ("0", "0 (Unrated)"),
+            ("1", "(1) Appalling"),
+            ("2", "(2) Horrible"),
+            ("3", "(3) Very Bad"),
+            ("4", "(4) Bad"),
+            ("5", "(5) Average"),
+            ("6", "(6) Fine"),
+            ("7", "(7) Good"),
+            ("8", "(8) Very Good"),
+            ("9", "(9) Great"),
+            ("10", "(10) Masterpiece")
+        ]
+        
+        for i, data_tuple in enumerate(ratings_data):
+            val = data_tuple[0]
+            text = data_tuple[1]
+            row_idx = i // 6
+            col_idx = i % 6
+            tk.Radiobutton(rating_frame, text=text, variable=self.rating_var, value=val, indicatoron=False, font=("Arial", 10, "bold"), width=14, bg="#e0e0e0", selectcolor="#a0c0ff").grid(row=row_idx, column=col_idx, padx=2, pady=2)
             
         action_frame = tk.Frame(self.control_frame)
         action_frame.pack(pady=10)
+        tk.Button(action_frame, text="◄ Go Back", command=self.go_back, font=("Arial", 12, "bold"), bg="#ff9800", fg="white", width=12, height=2).pack(side="left", padx=10)
         tk.Button(action_frame, text="Submit & Next", command=self.submit_current, font=("Arial", 12, "bold"), bg="#4caf50", fg="white", width=20, height=2).pack(side="left", padx=10)
         tk.Button(action_frame, text="Skip Title", command=self.skip_current, font=("Arial", 12, "bold"), bg="#f44336", fg="white", width=20, height=2).pack(side="left", padx=10)
 
@@ -190,6 +209,13 @@ class MalGuiImporter:
             except Exception:
                 self.img_label.config(image="")
 
+    def go_back(self):
+        if self.current_idx > 0:
+            self.current_idx -= 1
+            self.process_next_anime()
+        else:
+            messagebox.showinfo("Info", "This is already the first anime in the batch.")
+
     def submit_current(self):
         score = self.rating_var.get()
         status = self.status_var.get()
@@ -222,13 +248,15 @@ class MalGuiImporter:
         anime_xml += "<update_on_import>1</update_on_import>\n"
         anime_xml += "</anime>\n"
         
-        self.anime_xml_list.append(anime_xml)
+        self.anime_xml_dict[self.current_idx] = anime_xml
         
         self.current_idx += 1
         time.sleep(0.4)
         self.process_next_anime()
 
     def skip_current(self):
+        if self.current_idx in self.anime_xml_dict:
+            del self.anime_xml_dict[self.current_idx]
         self.current_idx += 1
         self.process_next_anime()
 
@@ -240,7 +268,10 @@ class MalGuiImporter:
         xml_str += '<user_name>Av1dz</user_name>\n'
         xml_str += '<user_export_type>1</user_export_type>\n'
         xml_str += '</myinfo>\n'
-        xml_str += "".join(self.anime_xml_list)
+        
+        xml_entries = [self.anime_xml_dict[k] for k in sorted(self.anime_xml_dict.keys())]
+        xml_str += "".join(xml_entries)
+        
         xml_str += '</myanimelist>'
         
         base_name = os.path.basename(self.filename)
