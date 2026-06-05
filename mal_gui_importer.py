@@ -26,7 +26,6 @@ class MalGuiImporter:
         self.current_idx = 0
         
         self.selected_mal_id = "0"
-        self.selected_title = ""
         self.selected_type = "TV"
         self.selected_episodes = "0"
         
@@ -109,10 +108,15 @@ class MalGuiImporter:
         self.main_frame.add(self.right_frame, weight=2)
         
         self.img_label = tk.Label(self.right_frame, bg="#1e1e1e")
-        self.img_label.pack(pady=10)
+        self.img_label.pack(pady=5)
         
-        self.details_label = tk.Label(self.right_frame, text="", justify="center", font=("Arial", 11), bg="#1e1e1e", fg="#ffffff")
-        self.details_label.pack(pady=5)
+        tk.Label(self.right_frame, text="Final Title to Save:", font=("Arial", 10, "bold"), bg="#1e1e1e", fg="#cccccc").pack(pady=(5, 0))
+        self.final_title_var = tk.StringVar()
+        self.final_title_entry = tk.Entry(self.right_frame, textvariable=self.final_title_var, font=("Arial", 12, "bold"), bg="#3c3c3c", fg="#ffffff", insertbackground="white", borderwidth=0, justify="center")
+        self.final_title_entry.pack(fill="x", padx=10, pady=5, ipady=4)
+        
+        self.details_label = tk.Label(self.right_frame, text="", justify="center", font=("Arial", 11), bg="#1e1e1e", fg="#aaaaaa")
+        self.details_label.pack(pady=2)
         
         self.control_frame = tk.Frame(self.root, bg="#1e1e1e", pady=15)
         self.control_frame.pack(fill="x", side="bottom")
@@ -156,9 +160,10 @@ class MalGuiImporter:
         action_frame = tk.Frame(self.control_frame, bg="#1e1e1e")
         action_frame.pack(pady=15)
         
-        tk.Button(action_frame, text="◄ Go Back", command=self.go_back, font=("Arial", 12, "bold"), bg="#d97706", fg="white", width=12, height=2, borderwidth=0, cursor="hand2").pack(side="left", padx=10)
-        tk.Button(action_frame, text="Submit & Next", command=self.submit_current, font=("Arial", 12, "bold"), bg="#16a34a", fg="white", width=20, height=2, borderwidth=0, cursor="hand2").pack(side="left", padx=10)
-        tk.Button(action_frame, text="Skip Title", command=self.skip_current, font=("Arial", 12, "bold"), bg="#dc2626", fg="white", width=20, height=2, borderwidth=0, cursor="hand2").pack(side="left", padx=10)
+        tk.Button(action_frame, text="◄ Go Back", command=self.go_back, font=("Arial", 12, "bold"), bg="#d97706", fg="white", width=10, height=2, borderwidth=0, cursor="hand2").pack(side="left", padx=10)
+        tk.Button(action_frame, text="Submit & Next", command=self.submit_current, font=("Arial", 12, "bold"), bg="#16a34a", fg="white", width=18, height=2, borderwidth=0, cursor="hand2").pack(side="left", padx=10)
+        tk.Button(action_frame, text="Skip Title", command=self.skip_current, font=("Arial", 12, "bold"), bg="#dc2626", fg="white", width=18, height=2, borderwidth=0, cursor="hand2").pack(side="left", padx=10)
+        tk.Button(action_frame, text="Save & Exit", command=self.save_xml_output, font=("Arial", 12, "bold"), bg="#2563eb", fg="white", width=12, height=2, borderwidth=0, cursor="hand2").pack(side="left", padx=10)
 
     def manual_search(self, event=None):
         query = self.search_var.get().strip()
@@ -184,9 +189,10 @@ class MalGuiImporter:
         else:
             self.results_box.insert(tk.END, "No database entries found for this query.")
             self.selected_mal_id = "0"
-            self.selected_title = query
+            self.final_title_var.set(query)
             self.selected_type = "TV"
             self.selected_episodes = "0"
+            self.details_label.config(text="Type: TV\nScore: N/A")
 
     def search_mal_api(self, query):
         url = "https://api.jikan.moe/v4/anime"
@@ -204,11 +210,19 @@ class MalGuiImporter:
 
     def process_next_anime(self):
         if self.current_idx >= len(self.all_anime):
-            self.save_xml_output()
-            return
+            add_more = messagebox.askyesno(
+                "Batch Complete", 
+                "You have reached the end of this batch.\n\nWould you like to manually add more anime?\n(Click 'No' to save XML and exit)"
+            )
+            if add_more:
+                self.all_anime.append("")
+            else:
+                self.save_xml_output()
+                return
             
         self.results_box.delete(0, tk.END)
         self.img_label.config(image="")
+        self.final_title_var.set("")
         self.details_label.config(text="")
         self.status_var.set("Completed")
         self.rating_var.set("0")
@@ -219,7 +233,10 @@ class MalGuiImporter:
         self.progress_label.config(text="Progress: " + str(self.current_idx + 1) + "/" + str(len(self.all_anime)))
         self.root.update()
         
-        self.manual_search()
+        if title:
+            self.manual_search()
+        else:
+            self.results_box.insert(tk.END, "Enter a title in the Manual Search bar and click Search API.")
 
     def on_select_anime(self, event):
         idx = self.results_box.curselection()
@@ -228,11 +245,14 @@ class MalGuiImporter:
             
         selected_data = self.current_results[idx[0]]
         self.selected_mal_id = str(selected_data["mal_id"])
-        self.selected_title = selected_data["title"]
+        
+        title_str = selected_data["title"]
+        self.final_title_var.set(title_str)
+        
         self.selected_type = selected_data.get("type", "TV")
         self.selected_episodes = str(selected_data.get("episodes") or 0)
         
-        info_text = "Title: " + self.selected_title + "\nType: " + self.selected_type + "\nScore: " + str(selected_data.get("score", "N/A"))
+        info_text = "Type: " + self.selected_type + "\nScore: " + str(selected_data.get("score", "N/A"))
         self.details_label.config(text=info_text)
         
         img_url = selected_data.get("images", {}).get("jpg", {}).get("image_url")
@@ -257,11 +277,15 @@ class MalGuiImporter:
         score = self.rating_var.get()
         status = self.status_var.get()
         
+        final_title = self.final_title_var.get().strip()
+        if not final_title:
+            final_title = "Unknown Title"
+        
         watched_eps = self.selected_episodes if status == "Completed" else "0"
         
         anime_xml = "<anime>\n"
         anime_xml += "<series_animedb_id>" + self.selected_mal_id + "</series_animedb_id>\n"
-        anime_xml += "<series_title><![CDATA[" + self.selected_title + "]]></series_title>\n"
+        anime_xml += "<series_title><![CDATA[" + final_title + "]]></series_title>\n"
         anime_xml += "<series_type>" + self.selected_type + "</series_type>\n"
         anime_xml += "<series_episodes>" + self.selected_episodes + "</series_episodes>\n"
         anime_xml += "<my_id>0</my_id>\n"
@@ -312,12 +336,28 @@ class MalGuiImporter:
         xml_str += '</myanimelist>'
         
         base_name = os.path.basename(self.filename)
+        if not base_name:
+            base_name = "manual_batch.txt"
+            
         output_filename = "mal_" + base_name.replace(".txt", ".xml")
         
         with open(output_filename, "w", encoding="utf-8") as f:
             f.write(xml_str)
             
-        messagebox.showinfo("Success", "Batch processing complete! XML output saved to " + output_filename)
+        msg = "Batch processing complete!\n\nXML output saved to " + output_filename
+        
+        if self.current_idx < len(self.all_anime):
+            remaining_titles = self.all_anime[self.current_idx:]
+            rem_filename = base_name.replace(".txt", "_remaining.txt")
+            
+            with open(rem_filename, "w", encoding="utf-8") as f:
+                for t in remaining_titles:
+                    if t.strip():
+                        f.write(t + "\n")
+                        
+            msg = "Progress saved!\n\nXML output saved to: " + output_filename + "\n\nUnrated titles saved to: " + rem_filename + " so you can resume this batch later."
+            
+        messagebox.showinfo("Success", msg)
         self.root.destroy()
 
 if __name__ == "__main__":
